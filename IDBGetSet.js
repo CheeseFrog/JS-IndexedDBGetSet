@@ -1,15 +1,15 @@
-function IDBset(n, v) { // store name and value
-    cookIDB(n, v, 1, 0); 
+cookIDB.set = (name, value, fn) => { // Set pair, callback success fn 
+    cookIDB(name, value, 1, fn); 
 }
 
-function IDBget(n, fn) { // callback result passed into first parameter, 'x' of fn(x) ; e.g. (x)=>{console.log(x)} 
-    cookIDB(n, 0, 0, fn);
+cookIDB.get = (name, fn) => { // Get value, callback success result passed into first fn parameter
+    cookIDB(name, 0, 0, fn);
 }
 
-function cookIDB(xn, xv, RW, fn) {
+function cookIDB(n, v, RW, fn) {
     var openDB = indexedDB.open("database", 1);
 
-    openDB.onupgradeneeded = () => { // create  schema
+    openDB.onupgradeneeded = () => { // Create  schema
         var db = openDB.result;
         db.createObjectStore("store", {keyPath: "name"});
     }
@@ -18,18 +18,18 @@ function cookIDB(xn, xv, RW, fn) {
         var db = openDB.result; // Start transaction
         var tx = db.transaction("store", "readwrite");
         var store = tx.objectStore("store");
+        var query;
         
         if (RW == 1) { // Modify Data
-            if (xv == null) store.delete({id: xn})
-            else store.put({name: xn, value: JSON.stringify(xv)});
+            if (v == null) query = store.delete({id: n})
+            else query = store.put({name: n, value: JSON.stringify(v)});
+            query.onsuccess = () => {if (fn) (fn)()}
         }
         
-        if (RW == 0) { // Query Data
-            var query = store.get(xn);
+        if (RW == 0) {
+            query = store.get(n);
             query.onsuccess = () => {
-                var r = query.result.value;
-                if (r) r = JSON.parse(r);
-                if (fn) (fn)(r);
+                if (fn) (fn)(JSON.parse(query.result.value||null));
             }
         }
 
